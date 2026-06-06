@@ -1,16 +1,24 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { claimHandle } from './actions';
 
 const HANDLE_REGEX = /^[a-zA-Z0-9_]*$/;
 
-const initialState = { error: '' };
+const initialState = { error: '', success: false };
 
 export default function SetupProfileClient({ email }: { email: string }) {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(claimHandle, initialState);
   const [handle, setHandle] = useState('');
   const [localError, setLocalError] = useState('');
+
+  useEffect(() => {
+    if (state?.success) {
+      router.replace('/dashboard');
+    }
+  }, [state?.success, router]);
 
   const handleChange = (value: string) => {
     const lower = value.toLowerCase();

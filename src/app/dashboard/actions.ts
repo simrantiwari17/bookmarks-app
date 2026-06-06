@@ -3,6 +3,20 @@
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 
+async function revalidateDashboardAndProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  revalidatePath('/dashboard');
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('handle')
+    .eq('id', userId)
+    .single();
+
+  if (profile?.handle) {
+    revalidatePath(`/${profile.handle}`);
+  }
+}
+
 export async function addBookmark(prevState: any, formData: FormData) {
   const title = formData.get('title') as string;
   const url = formData.get('url') as string;
@@ -39,7 +53,7 @@ export async function addBookmark(prevState: any, formData: FormData) {
     return { error: error.message };
   }
 
-  revalidatePath('/dashboard');
+  await revalidateDashboardAndProfile(supabase, user.id);
   return { success: true };
 }
 
@@ -83,7 +97,7 @@ export async function editBookmark(prevState: any, formData: FormData) {
     return { error: error.message };
   }
 
-  revalidatePath('/dashboard');
+  await revalidateDashboardAndProfile(supabase, user.id);
   return { success: true };
 }
 
@@ -109,6 +123,6 @@ export async function deleteBookmark(id: string) {
     return { error: error.message };
   }
 
-  revalidatePath('/dashboard');
+  await revalidateDashboardAndProfile(supabase, user.id);
   return { success: true };
 }

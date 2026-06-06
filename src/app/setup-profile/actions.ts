@@ -1,7 +1,9 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
+import { isReservedHandle } from '@/lib/constants';
+import { ensureProfile } from '@/lib/profile';
+import { revalidatePath } from 'next/cache';
 
 const HANDLE_REGEX = /^[a-zA-Z0-9_]+$/;
 
@@ -24,6 +26,10 @@ export async function claimHandle(prevState: any, formData: FormData) {
     return { error: 'Handle can only contain letters, numbers, and underscores.' };
   }
 
+  if (isReservedHandle(handle)) {
+    return { error: `@${handle} is reserved. Try another one.` };
+  }
+
   const supabase = await createClient();
 
   // Verify user is authenticated
@@ -38,25 +44,40 @@ export async function claimHandle(prevState: any, formData: FormData) {
     .from('profiles')
     .select('id')
     .eq('handle', handle)
-    .single();
+    .maybeSingle();
 
   if (existing && existing.id !== user.id) {
     return { error: `@${handle} is already taken. Try another one.` };
   }
 
-  // Update the profile with the claimed handle
-  const { error: updateError } = await supabase
-    .from('profiles')
-    .update({ handle })
-    .eq('id', user.id);
-
-  if (updateError) {
-    // Could be a unique constraint violation if race condition
-    if (updateError.code === '23505') {
-      return { error: `@${handle} was just taken. Try another one.` };
-    }
-    return { error: updateError.message };
+  try {
+    await ensureProfile(supabase, user.id);
+  } catch {
+    return { error: 'Could not create your profile. Please try again.' };
   }
 
-  redirect('/dashboard');
+  // Upsert so we save even if the signup trigger never created a profile row
+  const { data: saved, error: saveError } = await supabase
+    .from('profiles')
+    .upsert({ id: user.id, handle }, { onConflict: 'id' })
+    .select('handle')
+    .single();
+
+  if (saveError) {
+    if (saveError.code === '23505') {
+      return { error: `@${handle} was just taken. Try another one.` };
+    }
+    return { error: saveError.message };
+  }
+
+  if (!saved?.handle) {
+    return {
+      error:
+        'Your handle was not saved. Make sure the database schema is set up (run supabase/schema.sql in Supabase).',
+    };
+  }
+
+  revalidatePath('/setup-profile');
+  revalidatePath('/dashboard');
+  return { error: '', success: true };
 }

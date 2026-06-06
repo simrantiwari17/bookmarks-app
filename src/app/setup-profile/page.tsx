@@ -17,7 +17,7 @@ export default async function SetupProfilePage() {
     .from('profiles')
     .select('handle')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (profile?.handle) {
     redirect('/dashboard');

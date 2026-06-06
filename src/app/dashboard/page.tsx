@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   // If no handle claimed yet, redirect to setup-profile
   if (!profile?.handle) {

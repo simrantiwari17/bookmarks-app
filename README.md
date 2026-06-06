@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bookmarks App
 
-## Getting Started
+A small personal bookmark manager — linktree meets pocket. Save links privately, share a curated public page at `/@handle`.
 
-First, run the development server:
+## Features
+
+- **Accounts** — Email + password sign-up and login (Supabase Auth)
+- **Welcome email** — Sent via Resend on sign-up
+- **Bookmarks** — Add, edit, delete bookmarks (title, URL, public/private)
+- **Privacy** — Row Level Security in Supabase; server actions always scope by `user_id`
+- **Public profile** — Unique `@handle` at `/<handle>` (public bookmarks only)
+- **Dashboard** — Protected route for signed-in users
+
+## Stack
+
+- [Next.js 16](https://nextjs.org) (App Router, TypeScript)
+- [Supabase](https://supabase.com) — auth + Postgres + RLS
+- [Resend](https://resend.com) — transactional email
+- [Vercel](https://vercel.com) — deployment
+
+## Setup
+
+### 1. Supabase
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. Open **SQL Editor** and run the schema in [`supabase/schema.sql`](supabase/schema.sql).
+3. Copy **Project URL**, **anon key**, and **service role key** from **Project Settings → API**.
+4. Under **Authentication → Providers**, ensure **Email** is enabled.
+
+### 2. Resend
+
+1. Create an account at [resend.com](https://resend.com).
+2. Create an API key.
+3. For local testing, use the default `onboarding@resend.dev` sender (delivers only to your Resend account email).
+4. For production, verify a domain and set `RESEND_FROM_EMAIL`.
+
+### 3. Environment variables
+
+Copy the example file and fill in your keys:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon (public) key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server only — never expose to client) |
+| `RESEND_API_KEY` | Resend API key |
+| `RESEND_FROM_EMAIL` | Optional sender address |
+| `NEXT_PUBLIC_APP_URL` | App base URL (`http://localhost:3000` locally) |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Run locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy to Vercel
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Push this repo to GitHub.
+2. Import the project at [vercel.com/new](https://vercel.com/new).
+3. Add the same environment variables from `.env.local` in **Project Settings → Environment Variables**.
+4. Set `NEXT_PUBLIC_APP_URL` to your production URL (e.g. `https://your-app.vercel.app`).
+5. Deploy.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Or use the CLI:
 
-## Deploy on Vercel
+```bash
+npx vercel
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Security model
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Database**: RLS policies on `profiles` and `bookmarks` enforce ownership at the Postgres layer.
+- **Server actions**: Bookmark mutations require an authenticated session and filter by `user_id`.
+- **Middleware**: `/dashboard` and `/setup-profile` redirect unauthenticated visitors to `/login`.
+- **Public reads**: Only bookmarks with `is_public = true` are visible to others (via RLS and explicit filters on the profile page).
+
+## Project structure
+
+```
+src/
+  app/
+    [handle]/          # Public profile page
+    auth/actions.ts    # Sign up, login, logout
+    dashboard/         # Protected bookmark CRUD
+    setup-profile/     # Claim @handle
+    login/ signup/     # Auth pages
+  lib/constants.ts     # Reserved handles
+  utils/supabase/      # Supabase clients + session middleware
+supabase/schema.sql    # Database schema + RLS
+```
