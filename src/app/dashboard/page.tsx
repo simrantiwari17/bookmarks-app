@@ -20,6 +20,11 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single();
 
+  // If no handle claimed yet, redirect to setup-profile
+  if (!profile?.handle) {
+    redirect('/setup-profile');
+  }
+
   // Fetch user bookmarks
   const { data: bookmarks } = await supabase
     .from('bookmarks')

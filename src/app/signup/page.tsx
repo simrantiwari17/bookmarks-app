@@ -67,29 +67,6 @@ export default function SignupPage() {
               </div>
             )}
 
-            {/* Handle Input */}
-            <div>
-              <label
-                htmlFor="handle"
-                className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2"
-              >
-                Username / Handle
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 font-medium">
-                  @
-                </span>
-                <input
-                  id="handle"
-                  name="handle"
-                  type="text"
-                  required
-                  placeholder="alex"
-                  className="w-full pl-9 pr-4 py-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition duration-200"
-                />
-              </div>
-            </div>
-
             {/* Email Input */}
             <div>
               <label

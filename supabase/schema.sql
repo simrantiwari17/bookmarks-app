@@ -6,10 +6,10 @@ create extension if not exists "uuid-ossp";
 -- =========================================================================
 create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
-  handle text unique not null,
+  handle text unique,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   
-  constraint handle_length check (char_length(handle) >= 3)
+  constraint handle_length check (handle is null or char_length(handle) >= 3)
 );
 
 -- Enable Row Level Security (RLS)
@@ -85,29 +85,16 @@ create policy "Allow users to delete their own bookmarks"
 
 
 -- =========================================================================
--- 3. AUTOMATIC PROFILE TRIGGER ON SIGNUP
+-- 3. AUTOMATIC PROFILE CREATION ON SIGNUP (without handle)
 -- =========================================================================
--- Trigger function that automatically creates a profile when a new user signs up
+-- Trigger function that creates a profile row when a new user signs up.
+-- The handle is left NULL so the user can claim one via /setup-profile.
 create or replace function public.handle_new_user()
 returns trigger as $$
-declare
-  default_handle text;
 begin
-  -- Generate a default handle from email or random suffix if email prefix is too short/taken
-  default_handle := split_part(new.email, '@', 1);
-  if char_length(default_handle) < 3 then
-    default_handle := default_handle || floor(random() * 1000)::text;
-  end if;
-
-  insert into public.profiles (id, handle)
-  values (new.id, default_handle);
+  insert into public.profiles (id)
+  values (new.id);
   return new;
-exception
-  when unique_violation then
-    -- If handle already exists, append a unique string
-    insert into public.profiles (id, handle)
-    values (new.id, default_handle || '_' || substr(new.id::text, 1, 8));
-    return new;
 end;
 $$ language plpgsql security definer;
 
